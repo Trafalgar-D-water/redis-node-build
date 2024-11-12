@@ -13,10 +13,10 @@ const server = net.createServer((connection) => {
     const command = msg[2]
     const arg = msg[4]
     switch (command) {
-        case 'echo':
+        case 'ECHO':
             connection.write(`$${arg.length}\r\n${arg}\r\n`)
             break
-        case 'ping':
+        case 'PING':
             connection.write('+PONG\r\n')
             break
         case 'SET':
