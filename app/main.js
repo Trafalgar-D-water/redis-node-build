@@ -9,8 +9,15 @@ const server = net.createServer((connection) => {
 
   // Handle incoming data
   connection.on('data', (data) => {
-      connection.write('+PONG\r\n'); 
-    
+      // connection.write('+PONG\r\n'); 
+      const commnad = Buffer.from(data).toString().split("\r\n");
+
+      if(commnad[2] == 'ECHO'){
+        const str = commnad[4];
+        const l = str.length;
+        return connection.write("$" + l + "\r\n" + str + "\r\n");
+      }
+      connection.write('+PONG\r\n')
   });
 
   connection.on('end', () => {
