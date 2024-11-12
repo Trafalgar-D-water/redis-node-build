@@ -7,30 +7,26 @@ const STORAGE = {};
 const server = net.createServer((connection) => {
   console.log('Client connected');
 
-  connection.on('data', (data) => {
-    console.log('   Data received: ' + data.toString());
-    const msg = data.toString().split('\r\n')
-    const command = msg[2]
-    const arg = msg[4]
-    switch (command) {
-        case 'ECHO':
-            connection.write(`$${arg.length}\r\n${arg}\r\n`)
-            break
-        case 'PING':
-            connection.write('+PONG\r\n')
-            break
-        case 'SET':
-            STORAGE[msg[4]] = msg[6]
-            connection.write('+OK\r\n')
-            break
-        case 'GET':
-            connection.write(`$${STORAGE[msg[4]].length}\r\n${STORAGE[msg[4]]}\r\n` || '$-1\r\n')
-            break
-        default:
-            1
-            break
-    }
-});
+  connection.on("data", (data) => {
+    const commands = Buffer.from(data).toString().split("\r\n");
+    if (commands[2] === "ECHO") {
+      connection.write(`+${commands[4]}\r\n`);
+    } else if (commands[2] === "SET") {
+      connection.write("+OK\r\n");
+      storage[commands[4]] = commands[6];
+      if (commands[10]) {
+        setTimeout(() => {
+          delete storage[commands[4]];
+        }, commands[10]);
+      }
+    } else if (commands[2] === "GET") {
+      if (storage[commands[4]])
+        connection.write(
+          `$${storage[commands[4]].length}\r\n${storage[commands[4]]}\r\n`,
+        );
+      else connection.write("$-1\r\n");
+    } else connection.write("+PONG\r\n");
+  });
 // Handle end
 connection.on('end', () => {
     console.log('   Client disconnected');
