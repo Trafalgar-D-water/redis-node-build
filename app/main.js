@@ -13,16 +13,16 @@ const server = net.createServer((connection) => {
       connection.write(`+${commands[4]}\r\n`);
     } else if (commands[2] === "SET") {
       connection.write("+OK\r\n");
-      storage[commands[4]] = commands[6];
+      STORAGE[commands[4]] = commands[6];
       if (commands[10]) {
         setTimeout(() => {
-          delete storage[commands[4]];
+          delete STORAGE[commands[4]];
         }, commands[10]);
       }
     } else if (commands[2] === "GET") {
-      if (storage[commands[4]])
+      if (STORAGE[commands[4]])
         connection.write(
-          `$${storage[commands[4]].length}\r\n${storage[commands[4]]}\r\n`,
+          `$${STORAGE[commands[4]].length}\r\n${STORAGE[commands[4]]}\r\n`,
         );
       else connection.write("$-1\r\n");
     } else connection.write("+PONG\r\n");
