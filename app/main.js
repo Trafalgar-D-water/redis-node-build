@@ -1,41 +1,54 @@
-const net = require("net");
-console.log("Logs from your program will appear here!");
-
-const STORAGE = {};
-
-// Create server
+const net = require('net');
+function formatMessage(text = null) {
+	if (text) return `+${text}\r\n`;
+	return `$-1\r\n`;
+}
+function formatConfigMessage(key = '', value = '') {
+	return `*2\r\n$${key.length}\r\n${key}\r\n$${value.length}\r\n${value}\r\n`;
+}
+const dataStore = new Map();
+const config = new Map();
+const arguments = process.argv.slice(2);
+const [fileDir, fileName] = [arguments[1] ?? null, arguments[3] ?? null];
+if (fileDir && fileName) {
+	config.set('dir', fileDir);
+	config.set('dbfilename', fileName);
+}
 const server = net.createServer((connection) => {
-  console.log('Client connected');
-
-  connection.on("data", (data) => {
-    const commands = Buffer.from(data).toString().split("\r\n");
-    if (commands[2] === "ECHO") {
-      connection.write(`+${commands[4]}\r\n`);
-    } else if (commands[2] === "SET") {
-      connection.write("+OK\r\n");
-      STORAGE[commands[4]] = commands[6];
-      if (commands[10]) {
-        setTimeout(() => {
-          delete STORAGE[commands[4]];
-        }, commands[10]);
-      }
-    } else if (commands[2] === "GET") {
-      if (STORAGE[commands[4]])
-        connection.write(
-          `$${STORAGE[commands[4]].length}\r\n${STORAGE[commands[4]]}\r\n`,
-        );
-      else connection.write("$-1\r\n");
-    } else connection.write("+PONG\r\n");
-  });
-// Handle end
-connection.on('end', () => {
-    console.log('   Client disconnected');
+	connection.on('data', (data) => {
+		const inputString = data.toString();
+		const inputArray = inputString.split('\r\n');
+		const [, , command, , key = '', , value = '', , px = null, , expiryTime = null] = inputArray;
+		const cmd = command.toLowerCase();
+		console.log({ cmd, px, expiryTime, dataStore });
+		console.log({ inputArray });
+		switch (cmd) {
+			case 'ping':
+				connection.write(formatMessage('PONG'));
+				break;
+			case 'echo':
+				connection.write(formatMessage(key));
+				break;
+			case 'set':
+				dataStore.set(key, value);
+				if (px && expiryTime) {
+					setTimeout(() => {
+						dataStore.delete(key);
+					}, expiryTime);
+				}
+				connection.write(formatMessage('OK'));
+				break;
+			case 'get':
+				const val = dataStore.get(key);
+				connection.write(formatMessage(val));
+				break;
+			case 'config':
+				connection.write(formatConfigMessage(value, config.get(value)));
+				break;
+			default:
+				connection.write(formatMessage('Unknown Command'));
+				break;
+		}
+	});
 });
-
-  // Optional: Handle errors
-  connection.on('error', (err) => {
-    console.error('Error: ', err);
-  });
-});
-
-server.listen(6379, "127.0.0.1");
+server.listen(6379, '127.0.0.1');
